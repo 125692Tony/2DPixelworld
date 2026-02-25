@@ -1,17 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>Neon Ruin: 2026 Edition</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8"><title>NEON DREAD: SURFER</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="loading-screen"><div class="spinner"></div><p>LOADING RUINS...</p></div>
-    <div id="game-ui">
+    <div id="loading-screen">
+        <div class="glitch" data-text="LOADING REALM...">LOADING REALM...</div>
+        <div class="loader-bar"><div id="progress"></div></div>
+    </div>
+
+    <div id="game-container">
         <canvas id="gameCanvas"></canvas>
-        <div id="flash-overlay"></div>
-        <div class="hud">
-            <div class="stat"><div class="label">ENERGY</div><div class="bar-bg"><div id="sta-fill" class="bar-fill"></div></div></div>
-            <div id="location-tag">Sector 7: The Iron Forest</div>
+        
+        <!-- Main Menu -->
+        <div id="main-menu" class="overlay">
+            <h1 class="title">NEON<span>DREAD</span></h1>
+            <button class="menu-btn" onclick="startGame()">START RUN</button>
+            <button class="menu-btn" onclick="toggleMenu('char-select')">CHARACTERS</button>
+            <div class="highscore">BEST: <span id="best-score">0</span></div>
+        </div>
+
+        <!-- Character Select -->
+        <div id="char-select" class="overlay hidden">
+            <h2>SELECT SURFER</h2>
+            <div class="char-grid">
+                <div class="char-card active" onclick="setChar('punk')">PUNK</div>
+                <div class="char-card" onclick="setChar('cyborg')">CYBORG</div>
+                <div class="char-card" onclick="setChar('phantom')">GHOST</div>
+            </div>
+            <button class="menu-btn" onclick="toggleMenu('main-menu')">BACK</button>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="score-box">SCORE: <span id="current-score">0</span></div>
+            <button id="pause-btn" onclick="pauseGame()">ll</button>
+        </div>
+
+        <!-- Death Screen -->
+        <div id="death-screen" class="overlay hidden">
+            <h2 class="death-msg">WASTED</h2>
+            <p>Score: <span id="final-score">0</span></p>
+            <button class="menu-btn" onclick="resetGame()">TRY AGAIN</button>
         </div>
     </div>
     <script src="game.js"></script>
