@@ -1,108 +1,122 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 800; canvas.height = 600;
+canvas.width = 800; canvas.height = 500;
 
-// Game State
-const world = {
+// World & Game State
+let state = {
     view: 'top-down', // 'top-down' or 'side-scroller'
-    gravity: 0.8,
-    friction: 0.85,
-    cellSize: 50,
-    biome: 'forest'
+    biome: 'forest',
+    time: 0, // 0 to 2400 (Day/Night cycle)
+    flags: { savedVillage: false, bridgeBurned: false },
+    activeQuest: "Find the Ancient Ruins"
+};
+
+const biomes = {
+    forest: { ground: '#2e4d23', player: '#d35400', sky: '#5d81a2' },
+    desert: { ground: '#ccad60', player: '#2980b9', sky: '#f39c12' },
+    ruins: { ground: '#504141', player: '#ecf0f1', sky: '#2c3e50' }
 };
 
 const player = {
-    x: 100, y: 100, w: 32, h: 48,
-    vx: 0, vy: 0,
-    speed: 0.8, maxSpeed: 5,
-    isGrounded: false,
-    coyoteTimer: 0,
-    hp: 100,
-    lastPOVChange: 0
+    x: 400, y: 300, w: 24, h: 36, vx: 0, vy: 0,
+    accel: 0.6, friction: 0.82, maxSpeed: 4.5,
+    isGrounded: false, coyoteTimer: 0, stamina: 100
 };
 
+// Input Handling
 const keys = {};
-window.onkeydown = (e) => { keys[e.key.toLowerCase()] = true; if(e.key.toLowerCase() === 'o') switchPOV(); };
+window.onkeydown = (e) => { 
+    keys[e.key.toLowerCase()] = true; 
+    if(e.key === 'o') togglePerspective();
+    if(e.key === 'e') interact();
+};
 window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
 
-function switchPOV() {
-    const now = Date.now();
-    if (now - player.lastPOVChange < 500) return; // Prevent spam
-    world.view = world.view === 'top-down' ? 'side-scroller' : 'top-down';
-    player.vy = 0; // Reset momentum
-    player.lastPOVChange = now;
-    triggerScreenShake();
-}
-
-function triggerScreenShake() {
+function togglePerspective() {
+    state.view = state.view === 'top-down' ? 'side-scroller' : 'top-down';
+    player.vy = 0; // Prevent sky-rocketing during swap
     canvas.classList.add('shake');
     setTimeout(() => canvas.classList.remove('shake'), 200);
 }
 
 function update() {
-    const sprintMul = keys['shift'] ? 1.8 : 1;
+    // 1. Perspective-Based Physics
+    let speedMult = keys['shift'] && player.stamina > 0 ? 1.7 : 1;
+    if (keys['shift'] && player.stamina > 0) player.stamina -= 1;
+    else if (player.stamina < 100) player.stamina += 0.5;
 
-    // Movement Logic
-    if (world.view === 'top-down') {
-        if (keys['w']) player.vy -= player.speed * sprintMul;
-        if (keys['s']) player.vy += player.speed * sprintMul;
+    if (state.view === 'top-down') {
+        if (keys['w']) player.vy -= player.accel * speedMult;
+        if (keys['s']) player.vy += player.accel * speedMult;
     } else {
-        // Gravity & Jump for Side-scroller
-        player.vy += world.gravity;
+        player.vy += 0.7; // Gravity
         if (keys[' '] && (player.isGrounded || player.coyoteTimer > 0)) {
-            player.vy = -12;
-            player.coyoteTimer = 0;
+            player.vy = -12; player.coyoteTimer = 0;
         }
     }
+    if (keys['a']) player.vx -= player.accel * speedMult;
+    if (keys['d']) player.vx += player.accel * speedMult;
 
-    if (keys['a']) player.vx -= player.speed * sprintMul;
-    if (keys['d']) player.vx += player.speed * sprintMul;
-
-    // Apply Friction (Acceleration/Deceleration)
-    player.vx *= world.friction;
-    player.vy *= world.view === 'top-down' ? world.friction : 0.99;
-
-    // Update Position
+    // 2. Movement & Friction (Natural "Slide")
+    player.vx *= player.friction;
+    player.vy *= (state.view === 'top-down' ? player.friction : 0.98);
     player.x += player.vx;
     player.y += player.vy;
 
-    // Simple Collision (Floor)
-    player.isGrounded = false;
-    if (player.y + player.h > canvas.height - 50) {
-        player.y = canvas.height - 50 - player.h;
-        player.vy = 0;
-        player.isGrounded = true;
-        player.coyoteTimer = 10; // Reset Coyote Time
-    } else {
-        player.coyoteTimer--;
-    }
-
+    // 3. Collision & Biome Swapping
+    checkBoundaries();
+    
+    // 4. Update UI
+    document.getElementById('sta-fill').style.width = player.stamina + "%";
+    document.getElementById('current-biome').innerText = state.biome.toUpperCase();
+    
     draw();
     requestAnimationFrame(update);
 }
 
+function checkBoundaries() {
+    // Floor collision for Side-Scroller
+    if (state.view === 'side-scroller' && player.y + player.h > canvas.height - 40) {
+        player.y = canvas.height - 40 - player.h;
+        player.vy = 0; player.isGrounded = true; player.coyoteTimer = 8;
+    } else { player.coyoteTimer--; player.isGrounded = false; }
+
+    // Biome Logic (Horizontal Scroll)
+    if (player.x > canvas.width) { player.x = 10; state.biome = 'desert'; }
+    if (player.x < 0) { player.x = canvas.width - 10; state.biome = 'forest'; }
+}
+
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const theme = biomes[state.biome];
+    ctx.clearRect(0,0, canvas.width, canvas.height);
 
-    // Draw Biome Background
-    ctx.fillStyle = world.view === 'top-down' ? '#2d5a27' : '#5d81a2';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Ground (Side-scroller)
-    if(world.view === 'side-scroller') {
-        ctx.fillStyle = '#3e2723';
-        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    // Background & Environment Storytelling
+    ctx.fillStyle = theme.ground;
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+    
+    if (state.view === 'side-scroller') {
+        ctx.fillStyle = theme.sky;
+        ctx.fillRect(0, 0, canvas.width, canvas.height - 40);
+        ctx.fillStyle = '#333'; // "Dirty" ground
+        ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
     }
 
-    // Draw Player (Pixel Snapping)
-    ctx.fillStyle = '#e67e22';
-    const drawX = Math.round(player.x);
-    const drawY = Math.round(player.y);
-    ctx.fillRect(drawX, drawY, player.w, player.h);
+    // Player Sprite (Humanoid Block)
+    ctx.fillStyle = theme.player;
+    ctx.fillRect(Math.round(player.x), Math.round(player.y), player.w, player.h);
     
-    // POV Label
-    ctx.fillStyle = "white";
-    ctx.fillText(`POV: ${world.view.toUpperCase()} [O to swap]`, 20, 580);
+    // Head (Visual Juice)
+    ctx.fillStyle = '#f3e5ab';
+    ctx.fillRect(Math.round(player.x + 4), Math.round(player.y - 4), 16, 16);
+}
+
+function interact() {
+    // Example Choice Tracking
+    if (state.biome === 'forest') {
+        state.flags.savedVillage = true;
+        document.getElementById('dialogue-box').classList.remove('hidden');
+        document.getElementById('dialogue-text').innerText = "Thank you! You saved the village from the shift.";
+    }
 }
 
 update();
