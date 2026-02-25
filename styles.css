@@ -9,22 +9,14 @@ canvas { background: #000; image-rendering: pixelated; width: 100%; height: 100%
 .title { font-size: 80px; letter-spacing: 10px; color: var(--neon); text-shadow: 0 0 20px var(--neon); }
 .title span { color: var(--blood); text-shadow: 0 0 20px var(--blood); }
 
-/* Character Grid & Cards */
 .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px; }
-.char-card {
-    border: 1px solid var(--neon); padding: 40px 20px; cursor: pointer;
-    transition: 0.3s; text-align: center; background: rgba(0, 255, 255, 0.05);
-}
+.char-card { border: 1px solid var(--neon); padding: 40px 20px; cursor: pointer; transition: 0.3s; background: rgba(0, 255, 255, 0.05); text-align: center; }
 .char-card.active { background: var(--neon); color: black; box-shadow: 0 0 30px var(--neon); transform: scale(1.1); }
-.char-card:hover:not(.active) { background: rgba(0, 255, 255, 0.2); }
 
-.menu-btn { 
-    background: transparent; border: 2px solid var(--neon); color: var(--neon); 
-    padding: 15px 40px; margin: 10px; cursor: pointer; font-size: 20px; transition: 0.3s;
-}
+.menu-btn { background: transparent; border: 2px solid var(--neon); color: var(--neon); padding: 15px 40px; margin: 10px; cursor: pointer; font-size: 20px; transition: 0.3s; }
 .menu-btn:hover { background: var(--neon); color: #000; box-shadow: 0 0 30px var(--neon); }
 
-#hud { position: absolute; top: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 50; }
+#hud { position: absolute; top: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 50; box-sizing: border-box; }
 #pause-btn { pointer-events: auto; background: none; border: 1px solid white; color: white; cursor: pointer; padding: 5px 15px; }
 
 #loading-screen { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
