@@ -5,28 +5,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <p>GENERATING REALM...</p>
+    </div>
     <div id="game-ui">
         <canvas id="gameCanvas"></canvas>
-        <!-- Overlay HUD -->
+        <div id="flash-overlay"></div>
+        <!-- HUD -->
         <div class="hud-top">
             <div class="stat-container">
                 <div class="label">HP</div><div class="bar-bg"><div id="hp-fill" class="bar-fill"></div></div>
                 <div class="label">STA</div><div class="bar-bg"><div id="sta-fill" class="bar-fill yellow"></div></div>
             </div>
-            <div id="mini-map">
-                <div id="player-dot"></div>
-                <div class="biome-label" id="current-biome">Forest</div>
-            </div>
+            <div id="mini-map"><div id="player-dot"></div><div id="current-biome">Forest</div></div>
         </div>
-        <div id="quest-log" class="panel">
-            <h3>Quest Log</h3>
-            <ul id="quest-list"><li>• Explore the ruins to the East</li></ul>
-        </div>
-        <div id="dialogue-box" class="panel hidden">
-            <div id="speaker-name">Elder</div>
-            <div id="dialogue-text">Welcome, traveler. Press O to shift dimensions.</div>
-            <div id="dialogue-options"></div>
-        </div>
+        <div id="quest-log" class="panel"><h3>Quest Log</h3><ul id="quest-list"><li>• Find the Ancient Ruins</li></ul></div>
         <div id="interaction-prompt">Press [E] to Interact</div>
     </div>
     <script src="game.js"></script>
