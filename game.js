@@ -1,104 +1,147 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 800; canvas.height = 500;
+let width, height;
 
-let state = { view: 'top-down', biome: 'forest', isSwapping: false };
-const player = {
-    x: 400, y: 300, w: 24, h: 36, vx: 0, vy: 0,
-    accel: 0.5, friction: 0.85, maxSpeed: 5,
-    stamina: 100, isGrounded: false, coyoteTimer: 0
-};
+// Game State
+let gameRunning = false;
+let isPaused = false;
+let score = 0;
+let speed = 5;
+let lane = 1; // 0: Left, 1: Middle, 2: Right
+let playerY = 0;
+let jumpVel = 0;
+const gravity = 0.8;
 
-// Procedural Grass & Parallax Data
-const grass = [];
-for(let i=0; i<800; i+=20) grass.push({x: i, bend: 0});
-const layers = [{speed: 0.1, color: '#1a2e14'}, {speed: 0.3, color: '#25421d'}];
+// Obstacles
+let obstacles = [];
+let gameTick = 0;
 
-const keys = {};
-window.onkeydown = (e) => { 
-    keys[e.key.toLowerCase()] = true; 
-    if(e.key === 'o') handleSwap(); 
-};
-window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-function handleSwap() {
-    if(state.isSwapping) return;
-    state.isSwapping = true;
-    document.getElementById('flash-overlay').classList.add('flash-active');
-    setTimeout(() => {
-        state.view = state.view === 'top-down' ? 'side-scroller' : 'top-down';
-        player.vy = 0; canvas.classList.add('shake');
-    }, 300);
-    setTimeout(() => {
-        document.getElementById('flash-overlay').classList.remove('flash-active');
-        canvas.classList.remove('shake');
-        state.isSwapping = false;
-    }, 600);
+// Input Logic
+window.addEventListener('keydown', (e) => {
+    if (!gameRunning || isPaused) return;
+    if (e.key === 'a' || e.key === 'ArrowLeft') if (lane > 0) lane--;
+    if (e.key === 'd' || e.key === 'ArrowRight') if (lane < 2) lane++;
+    if (e.key === ' ' || e.key === 'w') {
+        if (playerY === 0) jumpVel = 15;
+    }
+});
+
+function spawnObstacle() {
+    const lanePos = Math.floor(Math.random() * 3);
+    const type = Math.random() > 0.7 ? 'SAW' : 'BARRIER';
+    obstacles.push({ z: 1000, lane: lanePos, type: type });
 }
 
 function update() {
-    let sprint = keys['shift'] && player.stamina > 0 ? 1.8 : 1;
-    if(keys['shift'] && player.stamina > 0) player.stamina -= 0.8;
-    else if(player.stamina < 100) player.stamina += 0.4;
+    if (!gameRunning || isPaused) return;
 
-    // Movement Logic
-    if (state.view === 'top-down') {
-        if(keys['w']) player.vy -= player.accel * sprint;
-        if(keys['s']) player.vy += player.accel * sprint;
-    } else {
-        player.vy += 0.7; // Gravity
-        if(keys[' '] && (player.isGrounded || player.coyoteTimer > 0)) {
-            player.vy = -12; player.coyoteTimer = 0;
+    gameTick++;
+    score += Math.floor(speed / 2);
+    speed += 0.001;
+
+    // Player Physics
+    playerY += jumpVel;
+    if (playerY > 0) jumpVel -= gravity;
+    else { playerY = 0; jumpVel = 0; }
+
+    // Spawn Logic
+    if (gameTick % Math.floor(100 / (speed/5)) === 0) spawnObstacle();
+
+    // Update Obstacles
+    obstacles.forEach((obs, i) => {
+        obs.z -= speed;
+        
+        // Collision Detection
+        if (obs.z < 50 && obs.z > 0 && obs.lane === lane) {
+            if (obs.type === 'BARRIER' && playerY < 30) endGame();
+            if (obs.type === 'SAW' && playerY < 50) endGame();
         }
-    }
-    if(keys['a']) player.vx -= player.accel * sprint;
-    if(keys['d']) player.vx += player.accel * sprint;
-
-    player.vx *= player.friction;
-    player.vy *= (state.view === 'top-down' ? player.friction : 0.99);
-    player.x += player.vx; player.y += player.vy;
-
-    // Coyote Time & Floor Collision
-    if(state.view === 'side-scroller' && player.y + player.h > 460) {
-        player.y = 460 - player.h; player.vy = 0;
-        player.isGrounded = true; player.coyoteTimer = 10;
-    } else { player.coyoteTimer--; player.isGrounded = false; }
+    });
+    obstacles = obstacles.filter(obs => obs.z > -100);
 
     draw();
-    document.getElementById('sta-fill').style.width = player.stamina + "%";
     requestAnimationFrame(update);
 }
 
 function draw() {
-    ctx.fillStyle = '#2e4d23'; ctx.fillRect(0,0,800,500); // Base
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, width, height);
 
-    // 1. Parallax Layers
-    layers.forEach(l => {
-        ctx.fillStyle = l.color;
-        let offset = (player.x * l.speed) % 400;
-        for(let i=-1; i<3; i++) ctx.fillRect((i*400) - offset, 150, 300, 350);
-    });
+    const horizon = height * 0.4;
+    const centerX = width / 2;
 
-    // 2. Interactive Grass (Bends when walked on)
-    ctx.strokeStyle = '#4a7c36'; ctx.lineWidth = 3;
-    grass.forEach(g => {
-        let dist = Math.abs(g.x - player.x);
-        g.bend = dist < 50 ? (player.vx * 3) : g.bend * 0.9;
-        ctx.beginPath(); ctx.moveTo(g.x, 460);
-        ctx.quadraticCurveTo(g.x + g.bend, 445, g.x + g.bend * 1.5, 435);
+    // Draw Floor (Perspective Lines)
+    ctx.strokeStyle = '#111';
+    for (let i = -5; i <= 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + (i * 10), horizon);
+        ctx.lineTo(centerX + (i * 1000), height);
         ctx.stroke();
-    });
-
-    // 3. Player Rendering
-    ctx.fillStyle = '#d35400';
-    ctx.fillRect(Math.round(player.x), Math.round(player.y), player.w, player.h);
-    ctx.fillStyle = '#f3e5ab'; // Head
-    ctx.fillRect(Math.round(player.x + 4), Math.round(player.y - 6), 16, 16);
-
-    if(state.view === 'side-scroller') {
-        ctx.fillStyle = '#222'; ctx.fillRect(0, 460, 800, 40);
     }
+
+    // Draw Obstacles (Running Fred traps)
+    obstacles.forEach(obs => {
+        const scale = 200 / (obs.z || 1);
+        const x = centerX + (obs.lane - 1) * (width * 0.3) * scale;
+        const y = horizon + (height * 0.5) * scale;
+        const size = 100 * scale;
+
+        ctx.fillStyle = obs.type === 'SAW' ? '#ff0044' : '#00ffff';
+        ctx.fillRect(x - size/2, y - size, size, size);
+        
+        // Add "Glow"
+        ctx.shadowBlur = 15 * scale;
+        ctx.shadowColor = ctx.fillStyle;
+    });
+    ctx.shadowBlur = 0;
+
+    // Draw Player (Subway Surfer style)
+    const pScale = 1;
+    const pX = centerX + (lane - 1) * (width * 0.15);
+    const pY = (height * 0.85) - playerY;
+    
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(pX - 20, pY - 60, 40, 60); // Humanoid block
+    ctx.strokeStyle = '#0ff';
+    ctx.strokeRect(pX - 20, pY - 60, 40, 60);
+    
+    document.getElementById('current-score').innerText = score;
 }
 
-window.onload = () => setTimeout(() => document.getElementById('loading-screen').style.display='none', 1000);
-update();
+// UI Functions
+function startGame() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    gameRunning = true;
+    update();
+}
+
+function endGame() {
+    gameRunning = false;
+    document.getElementById('death-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = score;
+    const best = localStorage.getItem('best') || 0;
+    if (score > best) localStorage.setItem('best', score);
+}
+
+function resetGame() {
+    location.reload();
+}
+
+// Simulated Loading
+let loadProgress = 0;
+const interval = setInterval(() => {
+    loadProgress += Math.random() * 20;
+    document.getElementById('progress').style.width = loadProgress + '%';
+    if (loadProgress >= 100) {
+        clearInterval(interval);
+        document.getElementById('loading-screen').classList.add('hidden');
+    }
+}, 200);
