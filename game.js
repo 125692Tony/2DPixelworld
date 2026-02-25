@@ -1,13 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let width, height, currentX;
-
-// Game State
-let gameRunning = false, isPaused = false;
-let score = 0, speed = 8, gameTick = 0;
-let targetLane = 1, playerY = 0, jumpVel = 0;
+let width, height, currentX, gameRunning = false, isPaused = false;
+let score = 0, speed = 8, gameTick = 0, targetLane = 1, playerY = 0, jumpVel = 0;
 let obstacles = [];
-const gravity = 0.8;
 
 function resize() {
     width = canvas.width = window.innerWidth;
@@ -17,123 +12,115 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Input
-window.addEventListener('keydown', (e) => {
-    if (!gameRunning || isPaused) return;
-    if ((e.key === 'a' || e.key === 'ArrowLeft') && targetLane > 0) targetLane--;
-    if ((e.key === 'd' || e.key === 'ArrowRight') && targetLane < 2) targetLane++;
-    if ((e.key === ' ' || e.key === 'w') && playerY === 0) jumpVel = 15;
-});
-
-// UI Controls
+// UI Nav
 function toggleMenu(menuId) {
     document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById(menuId);
     if (target) target.classList.remove('hidden');
 }
 
-function setChar(type) {
+function setChar(element, type) {
     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    element.classList.add('active');
 }
 
 function startGame() {
-    toggleMenu('none'); // Hide all menus
+    toggleMenu('none');
     document.getElementById('hud').classList.remove('hidden');
     gameRunning = true;
-    update();
+    score = 0;
+    obstacles = [];
+    loop(); // Start the loop
 }
 
 function pauseGame() {
     isPaused = !isPaused;
     document.getElementById('pause-btn').innerText = isPaused ? '▶' : 'll';
-    if (!isPaused) update();
-}
-
-function endGame() {
-    gameRunning = false;
-    const best = localStorage.getItem('best-score') || 0;
-    if (score > best) localStorage.setItem('best-score', score);
-    
-    document.getElementById('death-screen').classList.remove('hidden');
-    document.getElementById('final-score').innerText = score;
-    document.getElementById('best-score').innerText = localStorage.getItem('best-score');
 }
 
 function resetGame() {
-    score = 0; speed = 8; obstacles = []; gameTick = 0;
-    targetLane = 1; playerY = 0; jumpVel = 0;
-    document.getElementById('death-screen').classList.add('hidden');
+    gameRunning = false;
     toggleMenu('main-menu');
+    document.getElementById('hud').classList.add('hidden');
 }
 
-// Logic & Drawing
-function spawnObstacle() {
-    const lanePos = Math.floor(Math.random() * 3);
-    obstacles.push({ z: 1500, lane: lanePos });
-}
-
-function update() {
+// Logic
+window.addEventListener('keydown', (e) => {
     if (!gameRunning || isPaused) return;
-    gameTick++;
-    score += Math.floor(speed / 4);
-    speed += 0.002;
+    if ((e.key === 'ArrowLeft' || e.key === 'a') && targetLane > 0) targetLane--;
+    if ((e.key === 'ArrowRight' || e.key === 'd') && targetLane < 2) targetLane++;
+    if ((e.key === ' ' || e.key === 'w') && playerY === 0) jumpVel = 15;
+});
 
-    const targetX = (width / 2) + (targetLane - 1) * (width * 0.25);
-    currentX += (targetX - currentX) * 0.15; 
+function loop() {
+    if (!gameRunning) return;
+    if (!isPaused) {
+        gameTick++;
+        score++;
+        speed += 0.001;
+        
+        // Lane Slide
+        const targetX = (width / 2) + (targetLane - 1) * (width * 0.2);
+        currentX += (targetX - currentX) * 0.1;
 
-    playerY += jumpVel;
-    if (playerY > 0) jumpVel -= gravity; else { playerY = 0; jumpVel = 0; }
+        // Jump Physics
+        playerY += jumpVel;
+        if (playerY > 0) jumpVel -= 0.8; else { playerY = 0; jumpVel = 0; }
 
-    if (gameTick % Math.max(20, Math.floor(60 - speed)) === 0) spawnObstacle();
-
-    obstacles.forEach((obs) => {
-        obs.z -= speed;
-        // Collision: Check if obstacle is near player in Z-space and in the same lane
-        if (obs.z < 100 && obs.z > 20 && obs.lane === targetLane && playerY < 40) endGame();
-    });
-    obstacles = obstacles.filter(obs => obs.z > -100);
-
+        // Obstacles
+        if (gameTick % 60 === 0) obstacles.push({ z: 1000, lane: Math.floor(Math.random() * 3) });
+        obstacles.forEach(o => {
+            o.z -= speed;
+            if (o.z < 50 && o.z > 0 && o.lane === targetLane && playerY < 30) {
+                gameRunning = false;
+                document.getElementById('final-score').innerText = score;
+                toggleMenu('death-screen');
+            }
+        });
+        obstacles = obstacles.filter(o => o.z > -100);
+    }
+    
+    // Always draw, even if paused
     draw();
-    requestAnimationFrame(update);
+    requestAnimationFrame(loop);
 }
 
 function draw() {
-    ctx.fillStyle = '#050505';
+    ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, width, height);
-    const horizon = height * 0.45;
-    const centerX = width / 2;
+    
+    // Draw Floor Grid
+    ctx.strokeStyle = '#333';
+    for(let i=0; i<3; i++) {
+        let x = (width/2) + (i-1) * (width*0.2);
+        ctx.beginPath(); ctx.moveTo(x, height); ctx.lineTo(width/2, height*0.4); ctx.stroke();
+    }
 
-    // Obstacles
-    obstacles.forEach(obs => {
-        const scale = 600 / (obs.z + 600);
-        const x = centerX + (obs.lane - 1) * (width * 0.35) * scale;
-        const y = horizon + (height * 0.55) * scale;
-        const size = 100 * scale;
-        ctx.fillStyle = '#0ff';
+    // Draw Obstacles
+    ctx.fillStyle = '#0ff';
+    obstacles.forEach(o => {
+        let scale = 400 / (o.z + 400);
+        let x = (width/2) + (o.lane - 1) * (width*0.4) * scale;
+        let y = (height*0.4) + (height*0.6) * scale;
+        let size = 50 * scale;
         ctx.fillRect(x - size/2, y - size, size, size);
     });
 
-    // Player (Neon Cube)
+    // Draw Player
     ctx.fillStyle = '#fff';
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#0ff';
-    ctx.fillRect(currentX - 20, (height * 0.85) - playerY - 80, 40, 70);
-    ctx.shadowBlur = 0;
-
+    ctx.fillRect(currentX - 20, (height*0.9) - playerY - 40, 40, 40);
     document.getElementById('current-score').innerText = score;
 }
 
 // Initial Load
 window.onload = () => {
-    let prog = 0;
-    const inter = setInterval(() => {
-        prog += 5;
-        document.getElementById('progress').style.width = prog + '%';
-        if(prog >= 100) {
-            clearInterval(inter);
+    let p = 0;
+    let iv = setInterval(() => {
+        p += 10;
+        document.getElementById('progress').style.width = p + '%';
+        if(p >= 100) { 
+            clearInterval(iv); 
             document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('best-score').innerText = localStorage.getItem('best-score') || 0;
         }
     }, 50);
 };
