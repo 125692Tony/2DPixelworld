@@ -145,6 +145,20 @@ function startGame() {
     update();
 }
 
+// NOTE: Your original script was cut off here. 
+// These functions are required for the HTML buttons to work:
+
+function toggleMenu(id) {
+    document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+}
+
 function endGame() {
     gameRunning = false;
-    document.getElementById('death-screen').clas
+    document.getElementById('death-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = score;
+}
+
+function resetGame() {
+    location.reload();
+}
