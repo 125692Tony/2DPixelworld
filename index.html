@@ -2,19 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Quest: Dual POV</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Realm: Dual Dimensions</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
         <div id="hud">
-            <div id="hp-bar"><div id="hp-fill"></div></div>
-            <div id="stamina-bar"><div id="stamina-fill"></div></div>
-            <div id="active-item">Item: [None]</div>
+            <div class="stat-bar"><div id="hp-fill"></div></div>
+            <div id="quest-ui">Active Quest: <span id="quest-text">Explore the Wilds</span></div>
         </div>
-        <div id="quest-log">Active Quest: Find the Ancient Totem</div>
-        <div id="pov-indicator">POV: Top-Down</div>
+        <div id="interaction-prompt">Press [E] to Interact</div>
     </div>
     <script src="game.js"></script>
 </body>
