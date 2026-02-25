@@ -1,19 +1,13 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let width, height;
+let width, height, currentX;
 
 // Game State
-let gameRunning = false;
-let isPaused = false;
-let score = 0;
-let speed = 8;
-let targetLane = 1; 
-let currentX = 0;
-let playerY = 0;
-let jumpVel = 0;
-const gravity = 0.8;
+let gameRunning = false, isPaused = false;
+let score = 0, speed = 8, gameTick = 0;
+let targetLane = 1, playerY = 0, jumpVel = 0;
 let obstacles = [];
-let gameTick = 0;
+const gravity = 0.8;
 
 function resize() {
     width = canvas.width = window.innerWidth;
@@ -23,7 +17,7 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Input Logic
+// Input
 window.addEventListener('keydown', (e) => {
     if (!gameRunning || isPaused) return;
     if ((e.key === 'a' || e.key === 'ArrowLeft') && targetLane > 0) targetLane--;
@@ -31,15 +25,16 @@ window.addEventListener('keydown', (e) => {
     if ((e.key === ' ' || e.key === 'w') && playerY === 0) jumpVel = 15;
 });
 
-// UI Functions
+// UI Controls
 function toggleMenu(menuId) {
     document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
-    document.getElementById(menuId).classList.remove('hidden');
+    const target = document.getElementById(menuId);
+    if (target) target.classList.remove('hidden');
 }
 
 function setChar(type) {
     document.querySelectorAll('.char-card').forEach(c => c.classList.remove('active'));
-    event.target.classList.add('active');
+    event.currentTarget.classList.add('active');
 }
 
 function startGame() {
@@ -72,11 +67,10 @@ function resetGame() {
     toggleMenu('main-menu');
 }
 
-// Game Loop & Drawing
+// Logic & Drawing
 function spawnObstacle() {
     const lanePos = Math.floor(Math.random() * 3);
-    const type = Math.random() > 0.7 ? 'SAW' : 'BARRIER';
-    obstacles.push({ z: 1500, lane: lanePos, type: type });
+    obstacles.push({ z: 1500, lane: lanePos });
 }
 
 function update() {
@@ -85,8 +79,7 @@ function update() {
     score += Math.floor(speed / 4);
     speed += 0.002;
 
-    const centerX = width / 2;
-    const targetX = centerX + (targetLane - 1) * (width * 0.25);
+    const targetX = (width / 2) + (targetLane - 1) * (width * 0.25);
     currentX += (targetX - currentX) * 0.15; 
 
     playerY += jumpVel;
@@ -96,9 +89,8 @@ function update() {
 
     obstacles.forEach((obs) => {
         obs.z -= speed;
-        if (obs.z < 100 && obs.z > 20 && obs.lane === targetLane) {
-            if (playerY < 40) endGame();
-        }
+        // Collision: Check if obstacle is near player in Z-space and in the same lane
+        if (obs.z < 100 && obs.z > 20 && obs.lane === targetLane && playerY < 40) endGame();
     });
     obstacles = obstacles.filter(obs => obs.z > -100);
 
@@ -118,25 +110,30 @@ function draw() {
         const x = centerX + (obs.lane - 1) * (width * 0.35) * scale;
         const y = horizon + (height * 0.55) * scale;
         const size = 100 * scale;
-        ctx.fillStyle = obs.type === 'SAW' ? '#ff0044' : '#00ffff';
+        ctx.fillStyle = '#0ff';
         ctx.fillRect(x - size/2, y - size, size, size);
     });
 
-    // Player
+    // Player (Neon Cube)
     ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#0ff';
     ctx.fillRect(currentX - 20, (height * 0.85) - playerY - 80, 40, 70);
+    ctx.shadowBlur = 0;
+
     document.getElementById('current-score').innerText = score;
 }
 
-// Loading Simulation
+// Initial Load
 window.onload = () => {
     let prog = 0;
     const inter = setInterval(() => {
-        prog += 10;
+        prog += 5;
         document.getElementById('progress').style.width = prog + '%';
         if(prog >= 100) {
             clearInterval(inter);
-            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('best-score').innerText = localStorage.getItem('best-score') || 0;
         }
-    }, 100);
+    }, 50);
 };
