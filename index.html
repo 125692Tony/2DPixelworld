@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>NEON DREAD: SURFER</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON DREAD: SURFER</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="loading-screen">
-        <div class="glitch" data-text="LOADING REALM...">LOADING REALM...</div>
+        <div class="glitch">LOADING REALM...</div>
         <div class="loader-bar"><div id="progress"></div></div>
     </div>
 
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
-        
         <div id="main-menu" class="overlay">
             <h1 class="title">NEON<span>DREAD</span></h1>
             <button class="menu-btn" onclick="startGame()">START RUN</button>
             <button class="menu-btn" onclick="toggleMenu('char-select')">CHARACTERS</button>
             <div class="highscore">BEST: <span id="best-score">0</span></div>
         </div>
-
         <div id="char-select" class="overlay hidden">
             <h2>SELECT SURFER</h2>
             <div class="char-grid">
@@ -29,18 +29,17 @@
             </div>
             <button class="menu-btn" onclick="toggleMenu('main-menu')">BACK</button>
         </div>
-
         <div id="hud" class="hidden">
             <div class="score-box">SCORE: <span id="current-score">0</span></div>
             <button id="pause-btn" onclick="pauseGame()">ll</button>
         </div>
-
         <div id="death-screen" class="overlay hidden">
             <h2 class="death-msg">WASTED</h2>
             <p>Score: <span id="final-score">0</span></p>
             <button class="menu-btn" onclick="resetGame()">TRY AGAIN</button>
         </div>
     </div>
-    <script src="game.js"></script>
+    <!-- The defer attribute is critical for vscode.dev -->
+    <script src="game.js" defer></script>
 </body>
 </html>
