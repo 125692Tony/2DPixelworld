@@ -1,46 +1,53 @@
-
-:root { --neon: #0ff; --blood: #ff0044; }
-
-html, body {
+body {
     margin: 0;
     padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden; /* Prevents scrollbars */
-    background: #000;
-    touch-action: none; /* Prevents accidental zooming on phones */
-}
-
-#game-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    overflow: hidden; /* Hide overflow to prevent scrollbars */
+    background-color: #333;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: sans-serif;
 }
 
 canvas {
+    background-color: #70a1ff; /* Sky blue background */
     display: block;
+    border: 2px solid white;
+}
+
+#game-container {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-}
-
-.overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    z-index: 100;
+    align-items: center;
+    pointer-events: none; /* Allows canvas clicks to pass through UI elements */
 }
 
-.hidden { display: none !important; }
-.title { font-size: 60px; color: var(--neon); text-shadow: 0 0 15px var(--neon); }
-.title span { color: var(--blood); }
-.menu-btn { background: none; border: 2px solid var(--neon); color: var(--neon); padding: 10px 30px; cursor: pointer; font-size: 20px; }
-#hud { position: absolute; top: 20px; left: 20px; color: white; font-family: monospace; }
+#start-screen, #game-over-screen {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    pointer-events: auto; /* Re-enable pointer events for buttons/text */
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#score-board {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 24px;
+}
